@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Hộp thư kết bạn</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen p-4">
+
+  <!-- 🔙 Nút quay về -->
+  <button onclick="window.location.href='index.html'" class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded mb-4">
+    ← Quay về
+  </button>
+
+  <h1 class="text-2xl font-bold text-blue-600 mb-4 text-center">📬 Lời mời kết bạn</h1>
+
+  <!-- 📥 Danh sách lời mời -->
+  <div id="invitations" class="space-y-3">
+    <!-- Lời mời sẽ được render ở đây -->
+  </div>
+
+  <script>
+    // Giả lập danh sách lời mời kết bạn
+    const invitations = [
+      { name: "Tú", avatar: "https://via.placeholder.com/48?text=T" },
+      { name: "Linh", avatar: "https://via.placeholder.com/48?text=L" },
+      { name: "Quân", avatar: "https://via.placeholder.com/48?text=Q" }
+    ];
+
+    function renderInvites() {
+      const container = document.getElementById("invitations");
+      container.innerHTML = "";
+
+      invitations.forEach((user, index) => {
+        const div = document.createElement("div");
+        div.className = "flex items-center justify-between bg-white p-3 rounded shadow";
+
+        div.innerHTML = `
+          <div class="flex items-center space-x-3">
+            <img src="${user.avatar}" class="w-10 h-10 rounded-full" />
+            <span class="font-medium">${user.name}</span>
+          </div>
+          <div class="space-x-2">
+            <button onclick="accept(${index})" class="bg-green-500 text-white px-3 py-1 rounded text-sm">Chấp nhận</button>
+            <button onclick="decline(${index})" class="bg-red-500 text-white px-3 py-1 rounded text-sm">Từ chối</button>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+
+      if (invitations.length === 0) {
+        container.innerHTML = `<p class="text-center text-gray-500">Không có lời mời nào.</p>`;
+      }
+    }
+
+    function accept(index) {
+      alert(`✅ Đã chấp nhận ${invitations[index].name}`);
+      invitations.splice(index, 1);
+      renderInvites();
+    }
+
+    function decline(index) {
+      alert(`❌ Đã từ chối ${invitations[index].name}`);
+      invitations.splice(index, 1);
+      renderInvites();
+    }
+
+    renderInvites();
+  </script>
+</body>
+</html>

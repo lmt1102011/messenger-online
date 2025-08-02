@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tìm & Kết Bạn</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen p-4">
+    <button onclick="window.location.href='index.html'" class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded mb-4">
+  ← Quay về
+</button>
+
+  <h1 class="text-2xl font-bold text-center text-blue-600 mb-4">🔎 Tìm kiếm & Kết bạn</h1>
+
+  <!-- 🔍 Ô tìm kiếm -->
+  <div class="flex mb-4">
+    <input id="searchInput" type="text" placeholder="Nhập tên người dùng..." class="flex-1 px-4 py-2 border rounded-l focus:outline-none">
+    <button onclick="searchUsers()" class="bg-blue-500 text-white px-4 py-2 rounded-r">Tìm</button>
+  </div>
+
+  <!-- 📋 Kết quả -->
+  <div id="results" class="space-y-2">
+    <!-- Danh sách người dùng sẽ hiển thị tại đây -->
+  </div>
+
+  <script>
+    const users = ["Lan", "Minh", "Hải", "Tú", "Linh", "Quân"];
+    const sentRequests = [];
+
+    function searchUsers() {
+      const keyword = document.getElementById("searchInput").value.toLowerCase();
+      const resultsDiv = document.getElementById("results");
+      resultsDiv.innerHTML = "";
+
+      users.forEach(name => {
+        if (name.toLowerCase().includes(keyword) && !sentRequests.includes(name)) {
+          const div = document.createElement("div");
+          div.className = "flex justify-between items-center bg-white p-2 rounded shadow";
+
+          div.innerHTML = `
+            <span class="font-medium">${name}</span>
+            <button onclick="sendRequest('${name}')" class="bg-green-500 text-white px-3 py-1 rounded text-sm">Kết bạn</button>
+          `;
+
+          resultsDiv.appendChild(div);
+        }
+      });
+
+      if (resultsDiv.innerHTML === "") {
+        resultsDiv.innerHTML = `<p class="text-center text-gray-500">Không tìm thấy người dùng phù hợp.</p>`;
+      }
+    }
+
+    function sendRequest(name) {
+      alert("Đã gửi lời mời kết bạn đến " + name + "!");
+      sentRequests.push(name);
+      searchUsers();
+    }
+  </script>
+</body>
+</html>

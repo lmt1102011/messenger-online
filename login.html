@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Đăng nhập</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-blue-50 flex items-center justify-center min-h-screen">
+  <div class="bg-white p-8 rounded shadow w-full max-w-md">
+    <h2 class="text-2xl font-bold mb-6 text-center text-blue-600">Đăng nhập</h2>
+    <input type="text" id="username" placeholder="Tên người dùng" class="w-full border px-4 py-2 rounded mb-3" />
+    <input type="password" id="password" placeholder="Mật khẩu" class="w-full border px-4 py-2 rounded mb-4" />
+    <button onclick="login()" class="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded mb-3">Đăng nhập</button>
+    <p class="text-center text-sm text-gray-600">
+      Chưa có tài khoản? <a href="register.html" class="text-blue-600 hover:underline">Đăng ký</a>
+    </p>
+  </div>
+
+  <!-- Firebase SDK v8 -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDAtjOUgMkrZ0FRIaod0QV9b03qZZnlhu0",
+      authDomain: "messend-online.firebaseapp.com",
+      databaseURL: "https://messend-online-default-rtdb.firebaseio.com",
+      projectId: "messend-online",
+      storageBucket: "messend-online.firebasestorage.app",
+      messagingSenderId: "103927627337",
+      appId: "1:103927627337:web:f5347fc34dd8de4ee00998"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    function login() {
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value.trim();
+
+      if (!username || !password) {
+        alert("⚠️ Vui lòng nhập tên và mật khẩu.");
+        return;
+      }
+
+      const fakeEmail = username + "@messend.com";
+
+      auth.signInWithEmailAndPassword(fakeEmail, password)
+        .then((cred) => {
+          const uid = cred.user.uid;
+          return db.ref("users/" + uid).once("value").then(snapshot => {
+            const userData = snapshot.val();
+            if (!userData || userData.username !== username) {
+              alert("❌ Tên người dùng không khớp dữ liệu.");
+              return auth.signOut();
+            }
+
+            localStorage.setItem("username", userData.username);
+            localStorage.setItem("uid", uid);
+            window.location.href = "index.html";
+          });
+        })
+        .catch(error => {
+          alert("🚫 Lỗi đăng nhập: sai mật khẩu  " + error.message);
+        });
+    }
+  </script>
+</body>
+</html>

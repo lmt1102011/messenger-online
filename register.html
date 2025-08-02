@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Đăng ký</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-green-50 flex items-center justify-center min-h-screen">
+  <div class="bg-white p-8 rounded shadow w-full max-w-md">
+    <h2 class="text-2xl font-bold mb-6 text-center text-green-600">Tạo tài khoản</h2>
+    <input type="text" id="username" placeholder="Tên người dùng" class="w-full border px-4 py-2 rounded mb-3" />
+    <input type="password" id="password" placeholder="Mật khẩu (≥ 6 ký tự)" class="w-full border px-4 py-2 rounded mb-4" />
+    <button onclick="register()" class="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded mb-3">Đăng ký</button>
+    <p class="text-center text-sm text-gray-600">
+      Đã có tài khoản? <a href="login.html" class="text-green-600 hover:underline">Đăng nhập</a>
+    </p>
+  </div>
+
+  <!-- Firebase SDK v8 -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDAtjOUgMkrZ0FRIaod0QV9b03qZZnlhu0",
+      authDomain: "messend-online.firebaseapp.com",
+      databaseURL: "https://messend-online-default-rtdb.firebaseio.com",
+      projectId: "messend-online",
+      storageBucket: "messend-online.firebasestorage.app",
+      messagingSenderId: "103927627337",
+      appId: "1:103927627337:web:f5347fc34dd8de4ee00998"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    function register() {
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value.trim();
+
+      if (!username || !password) {
+        alert("⚠️ Vui lòng nhập đầy đủ tên và mật khẩu.");
+        return;
+      }
+      if (password.length < 6) {
+        alert("⚠️ Mật khẩu phải từ 6 ký tự trở lên.");
+        return;
+      }
+
+      const fakeEmail = username + "@messend.com";
+
+      // Kiểm tra tên đã tồn tại
+      db.ref("users").orderByChild("username").equalTo(username).once("value", snapshot => {
+        if (snapshot.exists()) {
+          alert("❌ Tên người dùng đã tồn tại. Hãy chọn tên khác.");
+        } else {
+          // Đăng ký tài khoản
+          auth.createUserWithEmailAndPassword(fakeEmail, password)
+            .then((cred) => {
+              const uid = cred.user.uid;
+              return db.ref("users/" + uid).set({
+                username: username,
+                createdAt: new Date().toISOString()
+              }).then(() => {
+                localStorage.setItem("uid", uid);
+                localStorage.setItem("username", username);
+                window.location.href = "index.html";
+              });
+            })
+            .catch(error => {
+              alert("🚫 Lỗi: " + error.message);
+            });
+        }
+      });
+    }
+  </script>
+</body>
+</html>

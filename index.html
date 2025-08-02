@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Messenger by tri</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .bubble-left { background: #f1f1f1; align-self: flex-start; border-radius: 1rem 1rem 1rem 0.25rem; }
+    .bubble-right { background: #2563eb; color: white; align-self: flex-end; border-radius: 1rem 1rem 0.25rem 1rem; }
+    .sidebar { transition: transform 0.3s ease; transform: translateX(-100%); }
+    .sidebar.open { transform: translateX(0); }
+  </style>
+</head>
+<body class="bg-gray-100 h-screen overflow-hidden">
+
+  <!-- Sidebar -->
+  <div id="sidebar" class="sidebar fixed top-0 left-0 h-full w-64 bg-white shadow-lg z-50 p-6">
+    <div class="flex items-center justify-between mb-6">
+      <p class="text-lg font-semibold">Tài khoản</p>
+      <button onclick="toggleSidebar()" class="text-xl">✖</button>
+    </div>
+    <div class="flex flex-col items-center">
+      <img id="myAvatar" src="https://via.placeholder.com/80?text=U" class="w-20 h-20 rounded-full shadow mb-3 object-cover" onclick="window.location='profile.html'" />
+      <p id="currentUser" class="font-semibold text-gray-800">Đang tải...</p>
+      <p id="userUid" class="text-xs text-gray-400 mb-6"></p>
+      <button onclick="logout()" class="mt-4 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-full shadow">
+        Đăng xuất
+      </button>
+    </div>
+  </div>
+
+  <!-- Nút menu -->
+  <button id="menuButton" onclick="toggleSidebar()" class="fixed top-4 left-4 z-40 bg-white shadow p-2 rounded-full hover:bg-gray-100">☰</button>
+
+  <!-- Nút kết bạn -->
+  <button id="addButton" onclick="showAddFriendScreen()" class="fixed top-4 right-4 z-40 bg-white shadow p-2 rounded-full hover:bg-gray-100">➕</button>
+
+  <!-- Danh sách bạn -->
+  <div id="friendScreen" class="absolute inset-0 bg-white overflow-y-auto z-10 p-6">
+    <h1 class="text-2xl font-bold mb-6 pl-12">Danh sách bạn bè</h1>
+    <div id="friendList" class="flex flex-col divide-y"></div>
+  </div>
+
+  <!-- Giao diện thêm bạn -->
+  <div id="addFriendScreen" class="hidden absolute inset-0 bg-white z-30 flex flex-col">
+    <div class="p-4 border-b flex items-center">
+      <input type="text" id="searchInput" oninput="renderAddFriendList()" placeholder="Tìm kiếm người dùng..." class="flex-1 px-4 py-2 rounded border border-gray-300" />
+      <button onclick="closeAddFriendScreen()" class="ml-2 px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm">Thoát</button>
+    </div>
+    <div id="addFriendList" class="flex-1 overflow-y-auto p-4 space-y-4"></div>
+  </div>
+
+  <!-- Chat -->
+  <div id="chatScreen" class="hidden fixed inset-0 bg-gray-50 z-20 flex flex-col">
+    <div class="bg-white shadow px-4 py-3 flex items-center sticky top-0 z-10">
+      <button onclick="exitChat()" class="text-sm text-blue-600 font-semibold mr-3">⬅ Thoát</button>
+      <img id="headerAvatar" src="https://via.placeholder.com/36" class="rounded-full w-8 h-8 shadow object-cover" />
+      <div class="ml-2">
+        <p id="headerName" class="font-semibold text-gray-800">Tên bạn</p>
+        <p class="text-xs text-green-500">Đang hoạt động</p>
+      </div>
+    </div>
+    <div id="chatBox" class="flex-1 overflow-y-auto px-4 py-4 flex flex-col space-y-2"></div>
+    <div class="bg-white p-3 border-t flex items-center space-x-2">
+      <input id="msgInput" type="text" placeholder="Aa..." class="flex-1 px-4 py-2 rounded-full border border-gray-300" onkeydown="handleEnter(event)">
+      <button onclick="sendMessage()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-full shadow">Gửi</button>
+    </div>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDAtjOUgMkrZ0FRIaod0QV9b03qZZnlhu0",
+      authDomain: "messend-online.firebaseapp.com",
+      databaseURL: "https://messend-online-default-rtdb.firebaseio.com",
+      projectId: "messend-online",
+      storageBucket: "messend-online.appspot.com",
+      messagingSenderId: "103927627337",
+      appId: "1:103927627337:web:f5347fc34dd8de4ee00998"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+    let currentFriend = null;
+    let currentUser = null;
+
+    auth.onAuthStateChanged(user => {
+      if (!user) {
+        window.location.href = "login.html";
+      } else {
+        currentUser = user;
+        db.ref("users/" + user.uid).once("value").then(snapshot => {
+          const data = snapshot.val();
+          const name = data?.username || "Không tên";
+          const avatar = data?.avatar || `https://via.placeholder.com/80?text=${name.charAt(0)}`;
+          document.getElementById("currentUser").innerText = name;
+          document.getElementById("userUid").innerText = "UID: " + user.uid;
+          document.getElementById("myAvatar").src = avatar;
+          window.currentUsername = name;
+          renderFriendList();
+        });
+      }
+    });
+
+    function renderFriendList() {
+      const container = document.getElementById("friendList");
+      container.innerHTML = '';
+      db.ref("users").once("value").then(snapshot => {
+        snapshot.forEach(child => {
+          const uid = child.key;
+          const data = child.val();
+          if (uid === currentUser.uid) return;
+          const name = data.username || "Không tên";
+          const avatar = data.avatar || `https://via.placeholder.com/48?text=${name.charAt(0)}`;
+          const div = document.createElement("div");
+          div.className = "flex items-center justify-between px-4 py-3 hover:bg-gray-100 transition";
+          div.innerHTML = `
+            <div class="flex items-center gap-4">
+              <img src="${avatar}" class="w-12 h-12 rounded-full object-cover" />
+              <p class="text-gray-800 font-medium text-base">${name}</p>
+            </div>`;
+          div.onclick = () => selectFriend(uid, name, avatar);
+          container.appendChild(div);
+        });
+      });
+    }
+
+    function selectFriend(uid, name, avatar) {
+      currentFriend = { uid, name, avatar };
+      document.getElementById("friendScreen").style.display = "none";
+      document.getElementById("chatScreen").style.display = "flex";
+      document.getElementById("menuButton").style.display = "none";
+      document.getElementById("addButton").style.display = "none";
+      document.getElementById("headerName").innerText = name;
+      document.getElementById("headerAvatar").src = avatar;
+      renderMessages();
+    }
+
+    function renderMessages() {
+      const roomId = [currentUser.uid, currentFriend.uid].sort().join("_");
+      const chatBox = document.getElementById("chatBox");
+      db.ref("messages/" + roomId).on("value", snapshot => {
+        chatBox.innerHTML = '';
+        snapshot.forEach(child => {
+          const msg = child.val();
+          const sent = msg.sender === currentUser.uid;
+          const div = document.createElement("div");
+          div.className = "max-w-[70%] px-4 py-3 text-sm shadow " + (sent ? "bubble-right self-end" : "bubble-left self-start");
+          div.innerText = msg.text;
+          chatBox.appendChild(div);
+        });
+        chatBox.scrollTop = chatBox.scrollHeight;
+      });
+    }
+
+    function sendMessage() {
+      const input = document.getElementById("msgInput");
+      const text = input.value.trim();
+      if (!text || !currentFriend) return;
+      input.value = '';
+      const roomId = [currentUser.uid, currentFriend.uid].sort().join("_");
+      const msg = {
+        sender: currentUser.uid,
+        text: text,
+        timestamp: Date.now()
+      };
+      db.ref("messages/" + roomId).push(msg);
+    }
+
+    function showAddFriendScreen() {
+      document.getElementById("addFriendScreen").style.display = "flex";
+      document.getElementById("menuButton").style.display = "none";
+      document.getElementById("addButton").style.display = "none";
+      renderAddFriendList();
+    }
+
+    function closeAddFriendScreen() {
+      document.getElementById("addFriendScreen").style.display = "none";
+      document.getElementById("menuButton").style.display = "block";
+      document.getElementById("addButton").style.display = "block";
+    }
+
+    function renderAddFriendList() {
+      const keyword = document.getElementById("searchInput").value.toLowerCase();
+      const container = document.getElementById("addFriendList");
+      container.innerHTML = '';
+      db.ref("users").once("value").then(snapshot => {
+        snapshot.forEach(child => {
+          const uid = child.key;
+          const data = child.val();
+          if (uid === currentUser.uid) return;
+          const name = data.username || "Không tên";
+          if (!name.toLowerCase().includes(keyword)) return;
+          const avatar = data.avatar || `https://via.placeholder.com/48?text=${name.charAt(0)}`;
+          const div = document.createElement("div");
+          div.className = "flex items-center justify-between bg-gray-100 rounded px-4 py-3";
+          div.innerHTML = `
+            <div class="flex items-center gap-4">
+              <img src="${avatar}" class="w-12 h-12 rounded-full object-cover" />
+              <p class="text-gray-800 font-medium text-base">${name}</p>
+            </div>
+            <button onclick="selectFriend('${uid}', '${name}', '${avatar}')" class="text-sm text-blue-600 hover:underline">Chat</button>
+          `;
+          container.appendChild(div);
+        });
+      });
+    }
+
+    function handleEnter(e) {
+      if (e.key === "Enter") sendMessage();
+    }
+
+    function exitChat() {
+      currentFriend = null;
+      document.getElementById("chatScreen").style.display = "none";
+      document.getElementById("friendScreen").style.display = "block";
+      document.getElementById("menuButton").style.display = "block";
+      document.getElementById("addButton").style.display = "block";
+    }
+
+    function toggleSidebar() {
+      document.getElementById("sidebar").classList.toggle("open");
+    }
+
+    function logout() {
+      auth.signOut().then(() => window.location.href = "login.html");
+    }
+  </script>
+</body>
+</html>
